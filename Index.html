@@ -1,1 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MySocial Live</title>
 
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    color: white;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+
+.card {
+    background: white;
+    color: black;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    background: #667eea;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.post img {
+    width: 100%;
+    border-radius: 10px;
+}
+
+.chat-box {
+    height: 200px;
+    overflow-y: auto;
+    background: #f4f4f4;
+    padding: 10px;
+    border-radius: 10px;
+    color: black;
+}
+
+.message {
+    margin: 5px 0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="auth">
+    <div class="card">
+        <h2>Login / Register</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Wachtwoord">
+        <button onclick="register()">Registreren</button>
+        <button onclick="login()">Inloggen</button>
+    </div>
+</div>
+
+<div id="app" style="display:none;">
+
+    <div class="card">
+        <h2>Nieuwe Post</h2>
+        <textarea id="postText" placeholder="Wat wil je delen?"></textarea>
+        <button onclick="addPost()">Plaatsen</button>
+    </div>
+
+    <div class="card">
+        <h2>Posts</h2>
+        <div id="posts"></div>
+    </div>
+
+    <div class="card">
+        <h2>Live Chat</h2>
+        <div class="chat-box" id="chat"></div>
+        <input id="chatInput" placeholder="Typ bericht...">
+        <button onclick="sendMessage()">Verstuur</button>
+    </div>
+
+    <button onclick="logout()">Uitloggen</button>
+
+</div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
+<script>
+// 🔥 PLAK HIER JOUW FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "JOUW_API_KEY",
+  authDomain: "JOUW_PROJECT.firebaseapp.com",
+  projectId: "JOUW_PROJECT",
+  storageBucket: "JOUW_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+auth.onAuthStateChanged(user => {
+    if(user){
+        document.getElementById("auth").style.display="none";
+        document.getElementById("app").style.display="block";
+        loadPosts();
+        loadMessages();
+    } else {
+        document.getElementById("auth").style.display="block";
+        document.getElementById("app").style.display="none";
+    }
+});
+
+function register(){
+    auth.createUserWithEmailAndPassword(
+        email.value, password.value
+    );
+}
+
+function login(){
+    auth.signInWithEmailAndPassword(
+        email.value, password.value
+    );
+}
+
+function logout(){
+    auth.signOut();
+}
+
+function addPost(){
+    db.collection("posts").add({
+        text: postText.value,
+        user: auth.currentUser.email,
+        time: Date.now()
+    });
+    postText.value="";
+}
+
+function loadPosts(){
+    db.collection("posts")
+      .orderBy("time")
+      .onSnapshot(snapshot=>{
+        posts.innerHTML="";
+        snapshot.forEach(doc=>{
+            posts.innerHTML+=`
+                <div class="post">
+                    <b>${doc.data().user}</b>
+                    <p>${doc.data().text}</p>
+                </div>
+            `;
+        });
+    });
+}
+
+function sendMessage(){
+    db.collection("chat").add({
+        text: chatInput.value,
+        user: auth.currentUser.email,
+        time: Date.now()
+    });
+    chatInput.value="";
+}
+
+function loadMessages(){
+    db.collection("chat")
+      .orderBy("time")
+      .onSnapshot(snapshot=>{
+        chat.innerHTML="";
+        snapshot.forEach(doc=>{
+            chat.innerHTML+=`
+                <div class="message">
+                    <b>${doc.data().user}:</b> ${doc.data().text}
+                </div>
+            `;
+        });
+        chat.scrollTop = chat.scrollHeight;
+    });
+}
+</script>
+
+</body>
+</html>
